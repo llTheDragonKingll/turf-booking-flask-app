@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Neon Slot Booking</title>
+
+<style>
+body {
+    background: #0f172a;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+
+h1 {
+    color: #39ff14;
+    text-shadow: 0 0 20px #39ff14;
+}
+
+.container {
+    width: 420px;
+    margin: auto;
+    margin-top: 40px;
+}
+
+.slot {
+    background: #111827;
+    border: 2px solid #39ff14;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+button {
+    background: #39ff14;
+    border: none;
+    padding: 8px 15px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+.booked {
+    color: red;
+    font-weight: bold;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #111827;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+input {
+    padding: 10px;
+    margin: 10px;
+    border-radius: 5px;
+    border: none;
+    width: 220px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>Neon Slot Booking</h1>
+
+<button onclick="logout()">Logout</button>
+
+<div class="container">
+
+<h3>Select Date</h3>
+
+<input type="date" id="datePicker">
+
+<br><br>
+
+<button onclick="loadSlots()">Proceed</button>
+
+<div id="slots"></div>
+
+</div>
+
+<div id="loginModal" class="modal">
+<div class="modal-content">
+
+<h2>Login</h2>
+
+<input id="phone" placeholder="Phone Number"><br>
+<input id="password" type="password" placeholder="Password"><br>
+
+<button onclick="login()">Login</button>
+
+<h3>Signup</h3>
+
+<input id="name" placeholder="Name"><br>
+
+<button onclick="signup()">Signup</button>
+
+</div>
+</div>
+
+<script>
+
+let currentUser = null
+let isAdmin = false
+
+// AUTO LOGIN
+window.onload = function() {
+
+    const savedPhone = localStorage.getItem("phone")
+    const savedAdmin = localStorage.getItem("admin")
+
+    if (savedPhone) {
+
+        currentUser = savedPhone
+        isAdmin = savedAdmin === "true"
+
+        if (isAdmin) {
+            addAdminButton()
+        }
+    }
+}
+
+// DATE LIMIT
+const datePicker = document.getElementById("datePicker")
+
+let today = new Date()
+let maxDate = new Date()
+
+maxDate.setDate(today.getDate() + 6)
+
+datePicker.min = today.toISOString().split("T")[0]
+datePicker.max = maxDate.toISOString().split("T")[0]
+
+// LOAD SLOTS
+async function loadSlots() {
+
+    const date = datePicker.value
+
+    if (!date) {
+        alert("Select a date")
+        return
+    }
+
+    const response = await fetch("/slots/" + date)
+    const slots = await response.json()
+
+    const container = document.getElementById("slots")
+    container.innerHTML = ""
+
+    slots.forEach(slot => {
+
+        const div = document.createElement("div")
+        div.className = "slot"
+
+        if (slot.is_booked) {
+            div.innerHTML = slot.time + " <span class='booked'>Booked</span>"
+        } else {
+            div.innerHTML = slot.time + 
+            ` <button onclick="bookSlot(${slot.id})">Book</button>`
+        }
+
+        container.appendChild(div)
+    })
+}
+
+// BOOK SLOT
+async function bookSlot(id) {
+
+    if (!currentUser) {
+        document.getElementById("loginModal").style.display = "flex"
+        return
+    }
+
+    await fetch("/book/" + id, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ phone: currentUser })
+    })
+
+    alert("Slot booked!")
+    loadSlots()
+}
+
+// SIGNUP
+async function signup() {
+
+    const name = document.getElementById("name").value
+    const phone = document.getElementById("phone").value
+    const password = document.getElementById("password").value
+
+    const res = await fetch("/signup", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, phone, password })
+    })
+
+    const data = await res.json()
+    alert(data.message)
+}
+
+// LOGIN
+async function login() {
+
+    const phone = document.getElementById("phone").value
+    const password = document.getElementById("password").value
+
+    const res = await fetch("/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ phone, password })
+    })
+
+    const data = await res.json()
+
+    if (data.message === "Login successful") {
+
+        currentUser = data.phone
+        isAdmin = data.admin
+
+        localStorage.setItem("phone", data.phone)
+        localStorage.setItem("admin", data.admin)
+        localStorage.setItem("name", data.name)
+
+        alert("Welcome " + data.name)
+
+        document.getElementById("loginModal").style.display = "none"
+
+        if (isAdmin) {
+            addAdminButton()
+        }
+
+    } else {
+        alert(data.message)
+    }
+}
+
+// ADMIN BUTTON
+function addAdminButton() {
+
+    const btn = document.createElement("button")
+
+    btn.innerText = "Admin Dashboard"
+
+    btn.onclick = () => {
+        window.location = "/admin?phone=" + currentUser
+    }
+
+    document.body.appendChild(btn)
+}
+
+// LOGOUT
+function logout() {
+    localStorage.clear()
+    location.reload()
+}
+
+</script>
+
+</body>
+</html>

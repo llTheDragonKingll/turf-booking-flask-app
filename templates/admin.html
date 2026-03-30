@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Admin Dashboard</title>
+
+<style>
+
+body{
+background:#0f172a;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+h1{
+color:#39ff14;
+text-shadow:0 0 20px #39ff14;
+}
+
+.container{
+width:900px;
+margin:auto;
+margin-top:40px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+background:#111827;
+box-shadow:0 0 20px #39ff14;
+}
+
+th{
+background:#39ff14;
+color:black;
+padding:12px;
+}
+
+td{
+padding:10px;
+border-bottom:1px solid #1f2937;
+}
+
+.booked{
+color:#39ff14;
+font-weight:bold;
+}
+
+.empty{
+color:red;
+}
+
+.counter{
+font-size:20px;
+margin-bottom:20px;
+}
+
+button{
+background:#39ff14;
+border:none;
+padding:10px 20px;
+border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+box-shadow:0 0 10px #39ff14;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+width:900px;
+margin:auto;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>⚡ Admin Dashboard</h1>
+
+<button onclick="logout()">Logout</button>
+
+</div>
+
+
+<div class="container">
+
+<div class="counter">
+Total Bookings: <span id="count">0</span>
+</div>
+
+<button onclick="loadData()">Refresh</button>
+
+<br><br>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Date</th>
+<th>Time</th>
+<th>Status</th>
+<th>Name</th>
+<th>Phone</th>
+</tr>
+
+</thead>
+
+<tbody id="tableBody">
+</tbody>
+
+</table>
+
+</div>
+
+
+<script>
+
+const urlParams = new URLSearchParams(window.location.search)
+const phone = urlParams.get("phone")
+
+if(phone !== "8928486398"){
+
+document.body.innerHTML="<h1>Unauthorized Access</h1>"
+
+}
+
+
+
+async function loadData(){
+
+const res = await fetch("/admin_data")
+
+const data = await res.json()
+
+const table = document.getElementById("tableBody")
+
+table.innerHTML=""
+
+let bookingCount = 0
+
+data.forEach(slot => {
+
+let status="Available"
+let name="-"
+let phone="-"
+
+if(slot.is_booked){
+
+status="<span class='booked'>Booked</span>"
+name=slot.name
+phone=slot.phone
+
+bookingCount++
+
+}else{
+
+status="<span class='empty'>Empty</span>"
+
+}
+
+const row=document.createElement("tr")
+
+row.innerHTML = `
+<td>${slot.date}</td>
+<td>${slot.time}</td>
+<td>${status}</td>
+<td>${name}</td>
+<td>${phone}</td>
+`
+
+table.appendChild(row)
+
+})
+
+document.getElementById("count").innerText = bookingCount
+
+}
+
+function logout(){
+
+window.location="/"
+
+}
+
+loadData()
+
+</script>
+
+</body>
+
+</html>
